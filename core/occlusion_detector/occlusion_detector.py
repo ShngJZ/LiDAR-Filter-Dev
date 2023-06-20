@@ -1,8 +1,6 @@
 import torch
 import occdtc_ops
-import torch.nn as nn
 import numpy as np
-import time
 
 class occlusion_detector(torch.autograd.Function):
     """

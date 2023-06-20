@@ -1,1 +1,1 @@
-from .occlusion_detector import self_occ_detector
+from .occlusion_detector import occlusion_detector
