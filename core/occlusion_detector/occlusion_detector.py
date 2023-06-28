@@ -79,7 +79,7 @@ class occlusion_detector(torch.autograd.Function):
         bz = int(bz)
         h = int(h)
         w = int(w)
-        occdtc_ops.self_occ_dtc(epp1, epp2, pts2dsrch_v1_batch, pts2d_v1_batch, pts2d_v2_batch, srh_distance, occ_selector, minsr_dist, minoc_dist, bz, h, w)
+        occdtc_ops.occ_dtc(epp1, epp2, pts2dsrch_v1_batch, pts2d_v1_batch, pts2d_v2_batch, srh_distance, occ_selector, minsr_dist, minoc_dist, bz, h, w)
         return occ_selector == 1
 
     @staticmethod
