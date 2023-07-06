@@ -2,11 +2,11 @@ from setuptools import setup
 from torch.utils.cpp_extension import BuildExtension, CUDAExtension
 
 setup(
-    name='occdtc_ops',
+    name='LiDARClean_ops',
     ext_modules=[
-        CUDAExtension('occdtc_ops', [
-            'occdtc_cpp.cpp',
-            'occdtc_cuda.cu',
+        CUDAExtension('LiDARClean_ops', [
+            'LiDARClean_ops_cpp.cpp',
+            'LiDARClean_ops_cu.cu',
         ]),
     ],
     cmdclass={

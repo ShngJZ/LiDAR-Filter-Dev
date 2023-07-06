@@ -1,1 +1,1 @@
-from .occlusion_detector import occlusion_detector
+from .LiDARCleaner import LiDARCleaner

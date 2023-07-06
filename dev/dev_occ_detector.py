@@ -10,7 +10,7 @@ from pyquaternion import Quaternion
 import matplotlib.pyplot as plt
 from scipy.interpolate import LinearNDInterpolator
 from scipy.spatial import Delaunay
-from core.occlusion_detector.occlusion_detector import occlusion_detector
+from core.LiDARCleaner.lidar_cleaner import LiDARCleaner
 from core.utils.visualization import tensor2disp
 
 def rotation_matrix(theta_x, theta_y, theta_z):
@@ -37,31 +37,11 @@ def geometric_transformation(rotation, translation):
     mat[:3, 3] = translation
     return mat
 
-
-export_root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'misc', 'midpred', 'occ_try1')
-os.makedirs(export_root, exist_ok=True)
-nusc = NuScenes(version='v1.0-mini', dataroot='misc/nuScenes/v1.0-mini/', verbose=True)
-for ii in range(100):
-    sample = nusc.sample[ii]
-
-    sample_token = sample['token']
-    camera_channel = 'CAM_FRONT'
-
-    sample = nusc.get('sample', sample_token)
-    lidar_token = sample['data']['LIDAR_TOP']
-    camera_token = sample['data'][camera_channel]
-
-    lidar = nusc.get('sample_data', lidar_token)
-    cam = nusc.get('sample_data', camera_token)
-    pcl_path = os.path.join(nusc.dataroot, lidar['filename'])
-    pc = LidarPointCloud.from_file(pcl_path)
-    im = Image.open(os.path.join(nusc.dataroot, cam['filename']))
-
-    cs_record_lidar = nusc.get('calibrated_sensor', lidar['calibrated_sensor_token'])
-    cs_record_cam = nusc.get('calibrated_sensor', cam['calibrated_sensor_token'])
-    poserecord_lidar = nusc.get('ego_pose', lidar['ego_pose_token'])
-    poserecord_cam = nusc.get('ego_pose', cam['ego_pose_token'])
-    cam_intrinsic = np.array(cs_record_cam['camera_intrinsic'])
+def read_intrinsic_extrinsic_LiDAR2Cam(nusc, lidar_meta, cam_meta):
+    cs_record_lidar = nusc.get('calibrated_sensor', lidar_meta['calibrated_sensor_token'])
+    cs_record_cam = nusc.get('calibrated_sensor', cam_meta['calibrated_sensor_token'])
+    poserecord_lidar = nusc.get('ego_pose', lidar_meta['ego_pose_token'])
+    poserecord_cam = nusc.get('ego_pose', cam_meta['ego_pose_token'])
 
     lidar_to_veh_rot = Quaternion(cs_record_lidar['rotation']).rotation_matrix
     lidar_to_veh_trans = np.array(cs_record_lidar['translation'])
@@ -80,7 +60,43 @@ for ii in range(100):
     veh_to_glb_cam_mat = geometric_transformation(veh_to_glb_cam_rot, veh_to_glb_cam_trans)
 
     # Relative pose from lidar to rgb camera
-    relative_pose = np.linalg.inv(cam_to_veh_mat) @ np.linalg.inv(veh_to_glb_cam_mat) @ veh_to_glb_lidar_mat @ lidar_to_veh_mat
+    extrinsic_LiDAR2Cam = np.linalg.inv(cam_to_veh_mat) @ np.linalg.inv(veh_to_glb_cam_mat) @ veh_to_glb_lidar_mat @ lidar_to_veh_mat
+    intrinsic = np.array(cs_record_cam['camera_intrinsic'])
+
+    return intrinsic, extrinsic_LiDAR2Cam
+
+export_root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'misc', 'midpred', 'occvls')
+os.makedirs(export_root, exist_ok=True)
+nusc = NuScenes(version='v1.0-mini', dataroot='misc/nuScenes/v1.0-mini/', verbose=True)
+
+
+cam_channel = 'CAM_FRONT'
+for ii in range(len(nusc.sample)):
+    sample = nusc.sample[ii]
+
+    token = sample['token']
+
+    lidar_token = sample['data']['LIDAR_TOP']
+    cam_token = sample['data'][cam_channel]
+
+    lidar_meta = nusc.get('sample_data', lidar_token)
+    cam_meta = nusc.get('sample_data', cam_token)
+    pc = LidarPointCloud.from_file(os.path.join(nusc.dataroot, lidar_meta['filename']))
+    im = Image.open(os.path.join(nusc.dataroot, cam_meta['filename']))
+
+    w, h = im.size
+    intrinsic, extrinsic_LiDAR2Cam = read_intrinsic_extrinsic_LiDAR2Cam(nusc, lidar_meta, cam_meta)
+
+    cleaner = LiDARCleaner(
+        intrinsic_cam=intrinsic,
+        extrinsic_LiDAR2Cam=extrinsic_LiDAR2Cam[0:3, :],
+        LiDARPoints3D=pc.points[0:3, :],
+        height=h, width=w,
+        rszh=0.2, rszw=0.5
+        # rszh=1.0, rszw=1.0
+    )
+    cleaner(rgb=im)
+
     # Relative pose from lidar to virtual camera
     relative_pose_virtual = copy.deepcopy(relative_pose)
     relative_pose_virtual[0:3, 3] = 0
@@ -101,19 +117,17 @@ for ii in range(100):
     points = points[:, mask]
     depths = depths[mask]
 
-    # plt.figure()
-    # plt.imshow(im)
-    # plt.scatter(points[0, :], points[1, :], c=1/depths, cmap=plt.cm.get_cmap('magma'))
-    # plt.show()
+    plt.figure(figsize=(16, 9))
+    plt.imshow(im)
+    plt.scatter(points[0, :], points[1, :], c=1/depths, cmap=plt.cm.get_cmap('magma'))
+    plt.savefig(os.path.join(export_root, '0_{}.jpg'.format(str(ii))), transparent=True, dpi=300)
+    plt.close()
 
     # Sparse to Dense depth map rendering
     grid_x, grid_y = np.meshgrid(range(1600),range(900))
     tri = Delaunay(points[:2,:].T)
     interp_De = LinearNDInterpolator(tri, depths, fill_value=1e5)
     intrp_d = interp_De(grid_x, grid_y)
-    # plt.figure()
-    # plt.imshow(1 / intrp_d, cmap=plt.cm.get_cmap('magma'))
-    # plt.show()
 
     intrinsic = torch.eye(4, dtype=torch.float32).cuda()[None,:,:]
     intrinsic[:,:3,:3] = torch.tensor(np.array(cs_record['camera_intrinsic']), dtype=torch.float32).cuda()
@@ -169,5 +183,4 @@ for ii in range(100):
     ], axis=1)
     imvls = np.concatenate([imvls1, imvls2], axis=0)
     Image.fromarray(imvls).save(os.path.join(export_root, '{}.jpg'.format(str(ii))))
-    # nusc.render_pointcloud_in_image(sample['token'], pointsensor_channel='LIDAR_TOP')
     a = 1
