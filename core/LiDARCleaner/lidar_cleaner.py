@@ -29,8 +29,6 @@ class LiDARCleaner(nn.Module):
         self.rszh, self.rszw = float(self.height_rz / self.height), float(self.width_rz / self.width)
         self.resizeM = self.acquire_resizeM(self.rszh, self.rszw)
 
-        self.debug = False
-
     def acquire_resizeM(self, rszh, rszw):
         resizeM = torch.eye(3)
         resizeM[0, 0] = rszw
@@ -97,29 +95,8 @@ class LiDARCleaner(nn.Module):
 
         assert prjpc_val.shape[1] > 100
 
-        # tri = Delaunay(prjpc_val.T)
-        # tri_function = LinearNDInterpolator(tri, depths_val, fill_value=1e5)
-        # inpait_d = tri_function(grid_x, grid_y)
-
         nearest_func = NearestNDInterpolator(prjpc_val.T, depths_val)
         inpait_d = nearest_func(grid_x, grid_y)
-
-        # inpait_d_ = self.interpolated_depth(inpait_d, prjpc_val)
-        # diff = depths_val - inpait_d_.cpu().numpy()
-        # diff = np.abs(diff)
-        # acc01 = (diff < 0.1).mean()
-        # acc05 = (diff < 0.5).mean()
-
-        # Change to KNN in 3D Space?
-        if rgb is not None:
-            import matplotlib.pyplot as plt
-            plt.figure()
-            plt.imshow(rgb.resize((self.width_rz, self.height_rz)))
-            plt.scatter(prjpc_val[0, :], prjpc_val[1, :], c=1 / depths_val, cmap=plt.cm.get_cmap('magma'))
-            plt.show()
-
-            from core.utils.visualization import tensor2disp
-            tensor2disp(1 / torch.from_numpy(inpait_d).unsqueeze(0).unsqueeze(0), vmax=0.3, viewind=0).show()
 
         return inpait_d, prjpc, depths, visible_points
 
@@ -154,12 +131,6 @@ class LiDARCleaner(nn.Module):
         eppdir = torch.nn.functional.normalize(eppdir, dim=0)
         eppdir = eppdir.T
 
-        # eppdir = eppdir[:, selector]
-        # E_mat = cross_product_matrix(pure_translation[0:3, 3])
-        # F_mat = intrinsic_cam_scaled.inverse().transpose(-2, -1) @ E_mat @ intrinsic_cam_scaled.inverse()
-        # eppline = compute_correspond_epilines(prjpc_vlidar.T, F_mat)
-        # eppdir_val = eppline / torch.sqrt(torch.sum(eppline[:, 0:2] ** 2, dim=1, keepdim=True))
-        # eppdir_val = eppdir_val[selector, 0:2]
         return eppdir, pure_translation[0:3, :], (eppx, eppy)
 
     def backprj_prj(self, intrinsic, pure_translation, enumlocation, depthinterp):
@@ -200,28 +171,9 @@ class LiDARCleaner(nn.Module):
         cosdiffmax, _ = torch.min(cosdiff, dim=1)
         occluded = cosdiffmax < 0
 
-        if self.debug:
-            h, w = depthmap.shape
-
-            from core.utils.visualization import tensor2disp
-            depthmapvls = tensor2disp(1 / depthmap.unsqueeze(0).unsqueeze(0), vmax=0.3, viewind=0)
-
-            sampleidx = 1793
-
-            import matplotlib.pyplot as plt
-            plt.figure()
-            plt.imshow(depthmapvls)
-            plt.xlim([0, w])
-            plt.ylim([h, 0])
-            plt.scatter(prjpc_lidar_[sampleidx, 0].cpu().numpy(), prjpc_lidar_[sampleidx, 1].cpu().numpy())
-            plt.scatter(prjpc_cam_[sampleidx, 0].cpu().numpy(), prjpc_cam_[sampleidx, 1].cpu().numpy())
-            plt.scatter(enumlocation[sampleidx, :, 0].cpu().numpy(), enumlocation[sampleidx, :, 1].cpu().numpy(), 1)
-            plt.scatter(pts3Dprj[sampleidx, :, 0].cpu().numpy(), pts3Dprj[sampleidx, :, 1].cpu().numpy(), 1)
-            plt.show()
-
         return occluded
 
-    def forward(self, rgb=None):
+    def forward(self, rgb=None, debug=True):
         # Inpainting Depthmap in Virtual LiDAR View (Pure Rotation Movement) on Resized Depthmap
         inpait_d, prjpc_vlidar, depths_vlidar, visible_sel_vlidar = self.inpainting_depth(rgb=None)
 
@@ -256,59 +208,27 @@ class LiDARCleaner(nn.Module):
         visible_points_filtered = torch.clone(visible_points)
         visible_points_filtered[tomask_all] = 0
 
-        x, y = 909, 826
-        debugindex = (camprj_vls[0, visible_sel_vlidar] - x).abs() + (camprj_vls[1, visible_sel_vlidar] - y).abs()
-        min_idx = torch.argmin(debugindex).item()
-
-        import matplotlib.pyplot as plt
-        plt.figure()
-        plt.imshow(rgb)
-        plt.scatter(camprj_vls[0, visible_points].numpy(), camprj_vls[1, visible_points].numpy(), c=1 / camdepth_vls[visible_points], cmap=plt.cm.get_cmap('magma'))
-        plt.savefig('tmp1.jpg', transparent=True)
-        # plt.show()
-
-        import matplotlib.pyplot as plt
-        plt.figure()
-        plt.imshow(rgb)
-        plt.scatter(camprj_vls[0, visible_points_filtered].numpy(), camprj_vls[1, visible_points_filtered].numpy(), c=1 / camdepth_vls[visible_points_filtered], cmap=plt.cm.get_cmap('magma'))
-        plt.savefig('tmp2.jpg', transparent=True)
-        # plt.show()
-
-        im1 = Image.open('tmp1.jpg')
-        im2 = Image.open('tmp2.jpg')
-        imcombined = np.concatenate([np.array(im1), np.array(im2)], axis=0)
-        imcombined = Image.fromarray(imcombined)
-
-        if self.debug:
-            prjpc_ck, depth_ck, sel_ck = self.prj(
-                self.resizeM @ self.intrinsic_cam,
-                self.extrinsic_LiDAR2Cam,
-                self.LiDARPoints3D,
-                height=self.height_rz, width=self.width_rz
-            )
-
-            eppdir_ck = -(prjpc_ck - prjpc_vlidar)
-            eppdir_ck = eppdir_ck / torch.sqrt(torch.sum(eppdir_ck ** 2, dim=0, keepdim=True))
-            eppdir_ck = eppdir_ck.T
-            eppdir_ck = eppdir_ck[visible_sel_vlidar, :]
-            eppdir = eppdir[visible_sel_vlidar, :]
+        if debug:
+            import matplotlib.pyplot as plt
+            plt.figure(figsize=(16, 9))
+            plt.imshow(rgb)
+            plt.scatter(camprj_vls[0, visible_points].numpy(), camprj_vls[1, visible_points].numpy(), c=1 / camdepth_vls[visible_points], cmap=plt.cm.get_cmap('magma'))
+            plt.savefig('tmp1.jpg', transparent=True, bbox_inches='tight')
+            # plt.show()
 
             import matplotlib.pyplot as plt
-            plt.figure()
-            plt.xlim([0, self.width_rz])
-            plt.ylim([self.height_rz, 0])
-            plt.axis('equal')
-            plt.scatter(prjpc_ck[0, sel_ck], prjpc_ck[1, sel_ck], c=1 / depth_ck[sel_ck], cmap=plt.cm.get_cmap('magma'))
-            plt.show()
+            plt.figure(figsize=(16, 9))
+            plt.imshow(rgb)
+            plt.scatter(camprj_vls[0, visible_points_filtered].numpy(), camprj_vls[1, visible_points_filtered].numpy(), c=1 / camdepth_vls[visible_points_filtered], cmap=plt.cm.get_cmap('magma'))
+            plt.savefig('tmp2.jpg', transparent=True, bbox_inches='tight')
+            # plt.show()
 
-            import matplotlib.pyplot as plt
-            plt.figure()
-            plt.xlim([0, self.width_rz])
-            plt.ylim([self.height_rz, 0])
-            plt.axis('equal')
-            plt.scatter(prjpc_vlidar[0, sel_ck], prjpc_vlidar[1, sel_ck], c=1 / depths_vlidar[sel_ck], cmap=plt.cm.get_cmap('magma'))
-            plt.quiver(prjpc_vlidar[0, sel_ck], prjpc_vlidar[1, sel_ck], -eppdir[sel_ck, 0], eppdir[sel_ck, 1])
-            plt.scatter(epppole[0], epppole[1], 20, 'r')
-            plt.show()
+            im1 = Image.open('tmp1.jpg')
+            im2 = Image.open('tmp2.jpg')
+            imcombined = np.concatenate([np.array(im1), np.array(im2)], axis=1)
+            imcombined = Image.fromarray(imcombined)
 
-        return imcombined
+            return visible_points_filtered, imcombined
+
+        else:
+            return visible_points_filtered
