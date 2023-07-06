@@ -1,17 +1,12 @@
-import copy
-import os
-import torch
+import os, time
+
 import numpy as np
+import tqdm
 from PIL import Image
 from nuscenes.utils.data_classes import LidarPointCloud
-from nuscenes.utils.geometry_utils import view_points
 from nuscenes.nuscenes import NuScenes
 from pyquaternion import Quaternion
-import matplotlib.pyplot as plt
-from scipy.interpolate import LinearNDInterpolator
-from scipy.spatial import Delaunay
-from core.LiDARCleaner.lidar_cleaner import LiDARCleaner
-from core.utils.visualization import tensor2disp
+from core.lidar_cleaner import LiDARCleaner
 
 def rotation_matrix(theta_x, theta_y, theta_z):
     theta_x = (np.pi / 180) * theta_x
@@ -67,9 +62,9 @@ def read_intrinsic_extrinsic_LiDAR2Cam(nusc, lidar_meta, cam_meta):
 
 nusc = NuScenes(version='v1.0-mini', dataroot='misc/nuScenes/v1.0-mini/', verbose=True)
 
+dr, cnt = 0, 0
 
-for ii in range(len(nusc.sample)):
-
+for ii in tqdm.tqdm(range(len(nusc.sample))):
     for cam_channel in ['CAM_FRONT', 'CAM_BACK', 'CAM_FRONT_RIGHT', 'CAM_FRONT_LEFT', 'CAM_BACK_LEFT', 'CAM_BACK_RIGHT']:
         export_root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'misc', 'midpred', 'occvls')
         os.makedirs(export_root, exist_ok=True)
@@ -97,9 +92,14 @@ for ii in range(len(nusc.sample)):
             rszh=0.2, rszw=0.5
         )
 
-        if np.mod(ii, 50) == 0:
+        if np.mod(ii, 1) == 50:
             visible_points_filtered, imcombined = cleaner(rgb=im, debug=True)
             imcombined.save(os.path.join(export_root, '{}_{}.jpg'.format(cam_channel, str(ii))))
+            cnt += 1
         else:
+            st = time.time()
             visible_points_filtered = cleaner(rgb=im, debug=False)
-    a = 1
+            dr += time.time() - st
+            cnt += 1
+
+print("Generated %d Samples, Ave Run time %f sec" % (cnt, dr / cnt))

@@ -1,15 +1,11 @@
 import copy
+import os
+
 import torch
-import occdtc_ops
 import numpy as np
 import torch.nn as nn
-
 import PIL.Image as Image
 
-from kornia.geometry.epipolar.numeric import cross_product_matrix
-from kornia.geometry.epipolar import compute_correspond_epilines
-from scipy.interpolate import LinearNDInterpolator
-from scipy.spatial import Delaunay
 from scipy.interpolate import NearestNDInterpolator
 
 class LiDARCleaner(nn.Module):
@@ -77,7 +73,7 @@ class LiDARCleaner(nn.Module):
         querydepth = querydepth.view([nquery, nsample, 1])
         return querydepth
 
-    def inpainting_depth(self, rgb=None):
+    def inpainting_depth(self, visible_cam, rgb=None):
         pure_rotation = copy.deepcopy(self.extrinsic_LiDAR2Cam)
         pure_rotation[0:3, 3:4] = 0.0
 
@@ -89,6 +85,7 @@ class LiDARCleaner(nn.Module):
             self.LiDARPoints3D,
             height=self.height_rz, width=self.width_rz
         )
+        visible_points = visible_points * visible_cam
 
         prjpc_val = prjpc[:, visible_points].cpu().numpy()
         depths_val = depths[visible_points].cpu().numpy()
@@ -174,8 +171,16 @@ class LiDARCleaner(nn.Module):
         return occluded
 
     def forward(self, rgb=None, debug=True):
+        # Acquire Visible LiDAR Points in Camera View
+        camprj_vls, camdepth_vls, visible_points = self.prj(
+            self.intrinsic_cam,
+            self.extrinsic_LiDAR2Cam,
+            self.LiDARPoints3D,
+            height=self.height, width=self.width
+        )
+
         # Inpainting Depthmap in Virtual LiDAR View (Pure Rotation Movement) on Resized Depthmap
-        inpait_d, prjpc_vlidar, depths_vlidar, visible_sel_vlidar = self.inpainting_depth(rgb=None)
+        inpait_d, prjpc_vlidar, depths_vlidar, visible_sel_vlidar = self.inpainting_depth(visible_cam=visible_points, rgb=None)
 
         # Compute Essential Matrix Between Interpolated Depthmap and Camera View, as a pure translation
         eppdir, pure_translation, epppole = self.epplinedir(prjpc_vlidar, visible_sel_vlidar)
@@ -198,13 +203,6 @@ class LiDARCleaner(nn.Module):
         tomask_all = torch.zeros_like(visible_sel_vlidar)
         tomask_all[visible_sel_vlidar] = tomask
 
-        # Acquire Visible LiDAR Points in Camera View
-        camprj_vls, camdepth_vls, visible_points = self.prj(
-            self.intrinsic_cam,
-            self.extrinsic_LiDAR2Cam,
-            self.LiDARPoints3D,
-            height=self.height, width=self.width
-        )
         visible_points_filtered = torch.clone(visible_points)
         visible_points_filtered[tomask_all] = 0
 
@@ -214,6 +212,7 @@ class LiDARCleaner(nn.Module):
             plt.imshow(rgb)
             plt.scatter(camprj_vls[0, visible_points].numpy(), camprj_vls[1, visible_points].numpy(), c=1 / camdepth_vls[visible_points], cmap=plt.cm.get_cmap('magma'))
             plt.savefig('tmp1.jpg', transparent=True, bbox_inches='tight')
+
             # plt.show()
 
             import matplotlib.pyplot as plt
@@ -227,6 +226,10 @@ class LiDARCleaner(nn.Module):
             im2 = Image.open('tmp2.jpg')
             imcombined = np.concatenate([np.array(im1), np.array(im2)], axis=1)
             imcombined = Image.fromarray(imcombined)
+
+
+            os.remove('tmp1.jpg')
+            os.remove('tmp2.jpg')
 
             return visible_points_filtered, imcombined
 
