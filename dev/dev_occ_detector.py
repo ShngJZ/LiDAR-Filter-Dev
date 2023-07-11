@@ -1,11 +1,13 @@
 import os, time
-
+import torch
 import numpy as np
 import tqdm
 from PIL import Image
 from nuscenes.utils.data_classes import LidarPointCloud
 from nuscenes.nuscenes import NuScenes
 from pyquaternion import Quaternion
+# import sys
+# sys.path.insert(0,'/user/ganesang/cvl/LidarFilter/LiDAR-Filter-Dev/')
 from core.lidar_cleaner import LiDARCleaner
 
 def rotation_matrix(theta_x, theta_y, theta_z):
@@ -60,13 +62,13 @@ def read_intrinsic_extrinsic_LiDAR2Cam(nusc, lidar_meta, cam_meta):
 
     return intrinsic, extrinsic_LiDAR2Cam
 
-nusc = NuScenes(version='v1.0-mini', dataroot='misc/nuScenes/v1.0-mini/', verbose=True)
+nusc = NuScenes(version='v1.0-trainval', dataroot='/scratch1/ganesang/nuScenes/', verbose=True)
 
 dr, cnt = 0, 0
 
 for ii in tqdm.tqdm(range(len(nusc.sample))):
     for cam_channel in ['CAM_FRONT', 'CAM_BACK', 'CAM_FRONT_RIGHT', 'CAM_FRONT_LEFT', 'CAM_BACK_LEFT', 'CAM_BACK_RIGHT']:
-        export_root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'misc', 'midpred', 'occvls')
+        export_root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'nuScenes', 'filtered_pts')
         os.makedirs(export_root, exist_ok=True)
 
         sample = nusc.sample[ii]
@@ -98,8 +100,15 @@ for ii in tqdm.tqdm(range(len(nusc.sample))):
             cnt += 1
         else:
             st = time.time()
-            visible_points_filtered = cleaner(rgb=im, debug=False)
+            visible_points_filtered, camprj_vls, camdepth_vls = cleaner(rgb=im, debug=False)
+            final_pts = torch.concatenate([camprj_vls.T, camdepth_vls[:,None]], dim=1)
+            final_pts = final_pts[visible_points_filtered]
+            lidar_file = lidar_meta['filename'].split('/')[-1]
+            cam_file = cam_meta['filename'].split('/')[-1]
+            torch.save(data, os.path.join(export_root, f"{lidar_file}#{cam_file}.pt"))
             dr += time.time() - st
             cnt += 1
+        
+
 
 print("Generated %d Samples, Ave Run time %f sec" % (cnt, dr / cnt))
