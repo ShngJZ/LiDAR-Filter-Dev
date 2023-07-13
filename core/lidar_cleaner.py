@@ -231,7 +231,7 @@ class LiDARCleaner(nn.Module):
             os.remove('tmp1.jpg')
             os.remove('tmp2.jpg')
 
-            return visible_points_filtered, imcombined
+            return visible_points_filtered, tomask_all, imcombined
 
         else:
-            return visible_points_filtered
+            return visible_points_filtered, tomask_all
