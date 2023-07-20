@@ -1,13 +1,10 @@
 import os, time
-import torch
 import numpy as np
 import tqdm
 from PIL import Image
 from nuscenes.utils.data_classes import LidarPointCloud
 from nuscenes.nuscenes import NuScenes
 from pyquaternion import Quaternion
-# import sys
-# sys.path.insert(0,'/user/ganesang/cvl/LidarFilter/LiDAR-Filter-Dev/')
 from core.lidar_cleaner import LiDARCleaner
 
 def rotation_matrix(theta_x, theta_y, theta_z):
@@ -96,22 +93,13 @@ for ii in tqdm.tqdm(range(len(nusc.sample))):
 
         # lidar_to_be_occluded: Binary Vector with Value True Indicates LiDAR Points Occluded
         if np.mod(ii, 1) == 50:
-            # visible_points_filtered, imcombined = cleaner(rgb=im, debug=True)
             visible_points_filtered, lidar_to_be_occluded, imcombined = cleaner(rgb=im, debug=True)
             imcombined.save(os.path.join(export_root, '{}_{}.jpg'.format(cam_channel, str(ii))))
             cnt += 1
         else:
             st = time.time()
             visible_points_filtered, lidar_to_be_occluded = cleaner(rgb=im, debug=False)
-            # visible_points_filtered, camprj_vls, camdepth_vls = cleaner(rgb=im, debug=False)
-            # final_pts = torch.concatenate([camprj_vls.T, camdepth_vls[:,None]], dim=1)
-            # final_pts = final_pts[visible_points_filtered]
-            # lidar_file = lidar_meta['filename'].split('/')[-1]
-            # cam_file = cam_meta['filename'].split('/')[-1]
-            # torch.save(data, os.path.join(export_root, f"{lidar_file}#{cam_file}.pt"))
             dr += time.time() - st
             cnt += 1
-        
-
 
 print("Generated %d Samples, Ave Run time %f sec" % (cnt, dr / cnt))

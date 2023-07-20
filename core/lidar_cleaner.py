@@ -12,7 +12,9 @@ class LiDARCleaner(nn.Module):
     """
     Function to Clean LiDAR Scan Data.
     """
-    def __init__(self, intrinsic_cam, extrinsic_LiDAR2Cam, LiDARPoints3D, height, width, rszh=0.5, rszw=1.0):
+    def __init__(self,
+                 intrinsic_cam, extrinsic_LiDAR2Cam, LiDARPoints3D, height, width, rszh=0.5, rszw=1.0,
+                 plotmarker_size=5.0, showimage=False):
         super().__init__()
         self.intrinsic_cam = self.check_intrinsic(copy.deepcopy(intrinsic_cam))
         self.extrinsic_LiDAR2Cam = self.check_extrinsic(copy.deepcopy(extrinsic_LiDAR2Cam))
@@ -24,6 +26,9 @@ class LiDARCleaner(nn.Module):
         self.height, self.width = int(height), int(width)
         self.rszh, self.rszw = float(self.height_rz / self.height), float(self.width_rz / self.width)
         self.resizeM = self.acquire_resizeM(self.rszh, self.rszw)
+
+        self.plotmarker_size = plotmarker_size
+        self.showimage = showimage
 
     def acquire_resizeM(self, rszh, rszw):
         resizeM = torch.eye(3)
@@ -207,26 +212,37 @@ class LiDARCleaner(nn.Module):
         visible_points_filtered[tomask_all] = 0
 
         if debug:
-            import matplotlib.pyplot as plt
-            plt.figure(figsize=(16, 9))
-            plt.imshow(rgb)
-            plt.scatter(camprj_vls[0, visible_points].numpy(), camprj_vls[1, visible_points].numpy(), c=1 / camdepth_vls[visible_points], cmap=plt.cm.get_cmap('magma'))
-            plt.savefig('tmp1.jpg', transparent=True, bbox_inches='tight')
+            vlsw, vlsh = rgb.size
 
+            import matplotlib
+            import matplotlib.pyplot as plt
+            matplotlib.use('Agg')
+
+            plt.figure(figsize=(16, 9))
+            if self.showimage: plt.imshow(rgb)
+            plt.scatter(
+                camprj_vls[0, visible_points].numpy(), camprj_vls[1, visible_points].numpy(),
+                c=1 / camdepth_vls[visible_points], cmap=plt.cm.get_cmap('magma'), s=self.plotmarker_size
+            )
+            plt.axis('scaled')
+            plt.xlim([0, vlsw])
+            plt.ylim([vlsh, 0])
+            plt.savefig('tmp1.jpg', transparent=True, bbox_inches='tight', dpi=300)
             # plt.show()
 
-            import matplotlib.pyplot as plt
             plt.figure(figsize=(16, 9))
-            plt.imshow(rgb)
-            plt.scatter(camprj_vls[0, visible_points_filtered].numpy(), camprj_vls[1, visible_points_filtered].numpy(), c=1 / camdepth_vls[visible_points_filtered], cmap=plt.cm.get_cmap('magma'))
-            plt.savefig('tmp2.jpg', transparent=True, bbox_inches='tight')
+            if self.showimage: plt.imshow(rgb)
+            plt.scatter(camprj_vls[0, visible_points_filtered].numpy(), camprj_vls[1, visible_points_filtered].numpy(), c=1 / camdepth_vls[visible_points_filtered], cmap=plt.cm.get_cmap('magma'), s=self.plotmarker_size)
+            plt.axis('scaled')
+            plt.xlim([0, vlsw])
+            plt.ylim([vlsh, 0])
+            plt.savefig('tmp2.jpg', transparent=True, bbox_inches='tight', dpi=300)
             # plt.show()
 
             im1 = Image.open('tmp1.jpg')
             im2 = Image.open('tmp2.jpg')
-            imcombined = np.concatenate([np.array(im1), np.array(im2)], axis=1)
+            imcombined = np.concatenate([np.array(im1), np.array(im2)], axis=0)
             imcombined = Image.fromarray(imcombined)
-
 
             os.remove('tmp1.jpg')
             os.remove('tmp2.jpg')
