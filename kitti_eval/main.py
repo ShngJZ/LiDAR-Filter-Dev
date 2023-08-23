@@ -15,7 +15,7 @@ def main(args):
     min_depth = 0.01
     max_depth = 80
 
-    eval_dataset = KITTIDataset(semidense_file=args.semidense_file, 
+    eval_dataset = KITTIDataset(gt_depth_file=args.semidense_file, 
                            base_path=args.data_path,
                            test_depth=args.test_depth)
 
@@ -32,11 +32,11 @@ def main(args):
     metrics_tracker = RunningMetric(list(DICT_METRICS_DEPTH.keys()))
 
     for batch in tqdm(eval_loader):
-        semidense, depth = batch
-        mask = (depth > min_depth) & (semidense > min_depth)
-        mask = mask & (depth < max_depth) & (semidense < max_depth)
+        gt, depth = batch
+        mask = (depth > min_depth) & (gt > min_depth)
+        # mask = mask & (depth < max_depth) & (gt < max_depth)
 
-        metrics_tracker.accumulate_metrics(gt=semidense, pred=depth, mask=mask)
+        metrics_tracker.accumulate_metrics(gt=gt, pred=depth, mask=mask)
 
     print(metrics_tracker.get_metrics())
         

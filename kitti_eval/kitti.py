@@ -37,7 +37,7 @@ class KITTIDataset(Dataset):
 
     def __init__(
         self,
-        semidense_file,
+        gt_depth_file,
         base_path,
         depth_scale=256,
         test_depth='raw',
@@ -47,7 +47,7 @@ class KITTIDataset(Dataset):
         self.base_path = base_path
         self.depth_scale = depth_scale
         self.test_depth = test_depth
-        self.split_file = semidense_file
+        self.split_file = gt_depth_file
 
         # load annotations
         self.dataset = []
@@ -70,7 +70,15 @@ class KITTIDataset(Dataset):
                 img_info["annotation_filename_depth"] = os.path.join(
                     self.base_path, depth_map
                 )
-
+                if "stereo" in self.split_file:
+                    if 'fore' in self.split_file:
+                        img_info["in_depth"] = img_info["annotation_filename_depth"].replace('groundtruth_disp_fore', f"groundtruth_{self.test_depth}")
+                    elif 'back' in self.split_file:
+                        img_info["in_depth"] = img_info["annotation_filename_depth"].replace('groundtruth_disp_back', f"groundtruth_{self.test_depth}")
+                    else:
+                        img_info["in_depth"] = img_info["annotation_filename_depth"].replace('groundtruth_disp', f"groundtruth_{self.test_depth}")
+                else:
+                    img_info["in_depth"] = img_info["annotation_filename_depth"].replace('groundtruth', f"groundtruth_{self.test_depth}")
                 self.dataset.append(img_info)
 
         print(
@@ -106,7 +114,7 @@ class KITTIDataset(Dataset):
                 Image.open(
                     os.path.join(
                         self.base_path,
-                        self.dataset[idx]["annotation_filename_depth"].replace('groundtruth', f"groundtruth_{self.test_depth}"),
+                        self.dataset[idx]["in_depth"],
                     )
                 )
             ).astype(np.float32)
