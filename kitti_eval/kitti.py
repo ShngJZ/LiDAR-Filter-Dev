@@ -11,7 +11,7 @@ from PIL import Image
 
 # from .dataset import BaseDataset
 from torch.utils.data import Dataset
-
+torch.manual_seed(0)
 class KITTIDataset(Dataset):
     
     min_depth = 0.01
@@ -78,7 +78,12 @@ class KITTIDataset(Dataset):
                     else:
                         img_info["in_depth"] = img_info["annotation_filename_depth"].replace('groundtruth_disp', f"groundtruth_{self.test_depth}")
                 else:
-                    img_info["in_depth"] = img_info["annotation_filename_depth"].replace('groundtruth', f"groundtruth_{self.test_depth}")
+                    if self.test_depth == "random":
+                        img_info["in_depth_raw"] = img_info["annotation_filename_depth"].replace('groundtruth', f"groundtruth_raw")
+                        img_info["in_depth_clean"] = img_info["annotation_filename_depth"].replace('groundtruth', f"groundtruth_filter")
+
+                    else:
+                        img_info["in_depth"] = img_info["annotation_filename_depth"].replace('groundtruth', f"groundtruth_{self.test_depth}")
                 self.dataset.append(img_info)
 
         print(
@@ -108,19 +113,50 @@ class KITTIDataset(Dataset):
             ).astype(np.float32)
             / self.depth_scale
         )
-
-        depth = (
-            np.asarray(
-                Image.open(
-                    os.path.join(
-                        self.base_path,
-                        self.dataset[idx]["in_depth"],
+        if self.test_depth != "random":
+            depth = (
+                np.asarray(
+                    Image.open(
+                        os.path.join(
+                            self.base_path,
+                            self.dataset[idx]["in_depth"],
+                        )
                     )
-                )
-            ).astype(np.float32)
-            / self.depth_scale
-        )
-    
+                ).astype(np.float32)
+                / self.depth_scale
+            )
+
+        else:
+            raw_depth = (
+                np.asarray(
+                    Image.open(
+                        os.path.join(
+                            self.base_path,
+                            self.dataset[idx]["in_depth_raw"],
+                        )
+                    )
+                ).astype(np.float32)
+                / self.depth_scale
+            )
+            clean_depth = (
+                np.asarray(
+                    Image.open(
+                        os.path.join(
+                            self.base_path,
+                            self.dataset[idx]["in_depth_clean"],
+                        )
+                    )
+                ).astype(np.float32)
+                / self.depth_scale
+            )
+            raw_pts = (raw_depth > 0).astype(np.uint8)
+            clean_pts = (clean_depth > 0).astype(np.uint8)
+            num_pts_raw = np.sum(raw_pts)
+            num_pts_clean = np.sum(clean_pts)
+            prob_rm = (num_pts_clean/num_pts_raw)
+            mask = (raw_pts*np.random.rand(*raw_pts.shape)) < prob_rm
+            depth = raw_depth * mask
+            # print(np.sum(depth>0), num_pts_raw, num_pts_clean)
         return semidense_depth, depth
 
    

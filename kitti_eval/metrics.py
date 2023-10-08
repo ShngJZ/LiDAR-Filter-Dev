@@ -87,13 +87,23 @@ def d3(gt, pred, stored_value, stored_samples, new_samples, splits):
 
 def rmse(gt, pred, stored_value, stored_samples, new_samples, splits):
     gts, preds = torch.split(gt, splits), torch.split(pred, splits)
-    img_aggregated_vals = [
-        torch.sqrt(((gt - pred) ** 2 + 1e-6).mean())
-        for gt, pred in zip(gts, preds)
-        if gt.shape[0] > 0
-    ]
+    # img_aggregated_vals = [
+    #     torch.sqrt(((gt - pred) ** 2 + 1e-6).mean())
+    #     for gt, pred in zip(gts, preds)
+    #     if gt.shape[0] > 0
+    # ]
+    # update_value = cumulate_mean(
+    #     torch.mean(torch.stack(img_aggregated_vals)),
+    #     stored_value,
+    #     new_samples,
+    #     stored_samples,
+    # )
+
+    rmse_ = torch.sqrt(((gt - pred) ** 2 + 1e-6).mean())
+    # print(rmse_)
+    # print(rmse_, stored_value, new_samples, stored_samples)
     update_value = cumulate_mean(
-        torch.mean(torch.stack(img_aggregated_vals)),
+        rmse_,
         stored_value,
         new_samples,
         stored_samples,

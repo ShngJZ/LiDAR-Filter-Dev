@@ -33,20 +33,19 @@ def main(args):
 
     for batch in tqdm(eval_loader):
         gt, depth = batch
-        mask = (depth > min_depth) & (gt > min_depth)
+        mask = (gt > min_depth) & (depth > min_depth)
         # mask = mask & (depth < max_depth) & (gt < max_depth)
-
         metrics_tracker.accumulate_metrics(gt=gt, pred=depth, mask=mask)
-
+        # print(metrics_tracker.get_metrics()["rmse"])
     print(metrics_tracker.get_metrics())
         
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Testing", conflict_handler="resolve")
 
-    parser.add_argument("--data-path", default=os.environ.get("TMPDIR", ""))
+    parser.add_argument("--data-path", default="")
     parser.add_argument("--semidense-file", type=str)
-    parser.add_argument("--test-depth", type=str, choices=['raw','filter'])
+    parser.add_argument("--test-depth", type=str, choices=['raw','filter','random'])
     # parser.add_argument("--kitti", type=str, choices=['raw','clean','semidense'], required=False)
     # parser.add_argument("--kitti_stereo", type=str, choices=['foreground','background','all'], required=False)
     # parser.add_argument("--eval_set", type=str, choices=['kitti_stereo','kitti360', 'kitti'], required=False)
