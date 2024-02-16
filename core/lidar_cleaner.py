@@ -213,35 +213,42 @@ class LiDARCleaner(nn.Module):
 
         if debug:
             vlsw, vlsh = rgb.size
+            sort_ind = camdepth_vls.argsort()
+            camprj_vls = camprj_vls[:, sort_ind]
 
             import matplotlib
             import matplotlib.pyplot as plt
             matplotlib.use('Agg')
 
             plt.figure(figsize=(16, 9))
-            if self.showimage: plt.imshow(rgb)
+            if self.showimage: plt.imshow(rgb, alpha=0.5)
             plt.scatter(
-                camprj_vls[0, visible_points].numpy(), camprj_vls[1, visible_points].numpy(),
-                c=1 / camdepth_vls[visible_points], cmap=plt.cm.get_cmap('magma'), s=self.plotmarker_size
-            )
-            plt.axis('scaled')
+                camprj_vls[0, visible_points[sort_ind]].numpy(), camprj_vls[1, visible_points[sort_ind]].numpy(),
+                c=1 / camdepth_vls[sort_ind][visible_points[sort_ind]], cmap=plt.cm.get_cmap('magma'), s=self.plotmarker_size,
+                vmin=0, vmax=0.28)
+            plt.axis('off')
             plt.xlim([0, vlsw])
             plt.ylim([vlsh, 0])
-            plt.savefig('tmp1.jpg', transparent=True, bbox_inches='tight', dpi=300)
+            plt.savefig('tmp1.jpg', transparent=True, bbox_inches='tight', dpi=300, pad_inches=0)
             # plt.show()
+            plt.close()
 
             plt.figure(figsize=(16, 9))
-            if self.showimage: plt.imshow(rgb)
-            plt.scatter(camprj_vls[0, visible_points_filtered].numpy(), camprj_vls[1, visible_points_filtered].numpy(), c=1 / camdepth_vls[visible_points_filtered], cmap=plt.cm.get_cmap('magma'), s=self.plotmarker_size)
-            plt.axis('scaled')
+            if self.showimage: plt.imshow(rgb, alpha=0.5)
+            plt.scatter(
+                camprj_vls[0, visible_points_filtered[sort_ind]].numpy(), camprj_vls[1, visible_points_filtered[sort_ind]].numpy(),
+                c=1 / camdepth_vls[sort_ind][visible_points_filtered[sort_ind]], cmap=plt.cm.get_cmap('magma'), s=self.plotmarker_size,
+                vmin=0, vmax=0.28)
+            plt.axis('off')
             plt.xlim([0, vlsw])
             plt.ylim([vlsh, 0])
-            plt.savefig('tmp2.jpg', transparent=True, bbox_inches='tight', dpi=300)
+            plt.savefig('tmp2.jpg', transparent=True, bbox_inches='tight', dpi=300, pad_inches=0)
             # plt.show()
+            plt.close()
 
-            im1 = Image.open('tmp1.jpg')
-            im2 = Image.open('tmp2.jpg')
-            imcombined = np.concatenate([np.array(im1), np.array(im2)], axis=0)
+            im1 = Image.open('tmp1.jpg')#.resize((vlsw, vlsh))
+            im2 = Image.open('tmp2.jpg')#.resize((vlsw, vlsh))
+            imcombined = np.concatenate([np.array(im1), np.array(im2)], axis=1)
             imcombined = Image.fromarray(imcombined)
 
             os.remove('tmp1.jpg')
