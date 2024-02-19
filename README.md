@@ -1,14 +1,15 @@
-# LiDAR Cleaner
+# Removing Projective LiDAR Depthmap Artifacts via Exploiting Stereo Geometry
 
-- Input: 3D points, Intrinsic, Extrinsic.
-- Output: A binary indicator of visible points in RGB Camera.
-- Todo:
-  - Write the Output to HDF5 file to avoid large number of output files.
-  - Write the Reading function of HDF5 file. 
+[Shengjie Zhu](https://shngjz.github.io), 
+[Girish Chandar G](girish1511.github.io), 
+[Abhinav Kumar](https://sites.google.com/view/abhinavkumar), 
+[Xiaoming Liu](http://www.cse.msu.edu/~liuxm/index2.html)
+
 
 ## Setup
 
-Install PyTorch version compatible with your device from [here](https://pytorch.org/get-started/previous-versions/). Run the following commands to install the rest of the requirements
+- Install PyTorch version compatible with your device from [here](https://pytorch.org/get-started/previous-versions/). 
+- Run the following commands to install the rest of the requirements
 
 ```bash
 git clone https://github.com/ShngJZ/LiDAR-Filter-Dev.git
