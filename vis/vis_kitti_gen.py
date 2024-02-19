@@ -10,6 +10,7 @@ import sys
 print(sys.path)
 sys.path.append("../LiDAR-Filter-Dev")
 from core.lidar_cleaner import LiDARCleaner
+import argparse
 
 
 def geometric_transformation(rotation, translation):
@@ -41,23 +42,13 @@ def read_LiDAR_calib(LIDAR_CALIB_PATH):
     lidar_T = lidar_calib['T'].astype(np.float32)
     return geometric_transformation(lidar_R, lidar_T)
 
-
-BASE_PATH="/scratch1/ganesang/kitti/raw"
-DIR = "2011_09_26"
-SUBDIR = f"{DIR}_drive_0005_sync"
-LIDAR_DIR = os.path.join(BASE_PATH, DIR, SUBDIR, 'velodyne_points/data')
-IMG_DIR = os.path.join(BASE_PATH, DIR, SUBDIR, 'image_02/data')
-CAM_CALIB_PATH = os.path.join(BASE_PATH, DIR, 'calib_cam_to_cam.txt')
-LIDAR_CALIB_PATH = os.path.join(BASE_PATH, DIR, 'calib_velo_to_cam.txt')
-OUTPUT_DIR = f"vis/kitti/"
-
 def func(fr_num):
 
     im = Image.open(os.path.join(IMG_DIR, f'{fr_num}.png'))
     data_bin = np.fromfile(os.path.join(LIDAR_DIR, f'{fr_num}.bin'),dtype=np.float32).reshape((-1, 4))
     lidar_pts = data_bin
     lidar_pts[:,-1] = 1.0
-    os.makedirs(osp.join('videos','kitti',SUBDIR), exist_ok=True)
+    os.makedirs(osp.join('videos','kitti',SEQ), exist_ok=True)
 
     x, y, z = 0.28, -0.00, -0.17
     T_LiDAR_Padding = geometric_transformation(np.eye(3), np.array([x, y, z]))
@@ -78,9 +69,31 @@ def func(fr_num):
         plotmarker_size=2, showimage=True
     )
     visible_points_filtered, lidar_to_be_occluded, imcombined = cleaner(rgb=im, debug=True)
-    imcombined.save(osp.join(OUTPUT_DIR, f"{SUBDIR}+{fr_num}.png"))
+    imcombined.save(osp.join(OUTPUT_DIR, f"{SEQ}+{fr_num}.png"))
 
 if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(description="Testing", conflict_handler="resolve")
+    
+    parser.add_argument("--data_dir", 
+                        required="True", 
+                        help="Path to KITTI dataset")
+    parser.add_argument("--seq",
+                        default="")
+    parser.add_argument("--output_dir",
+                        default="vis/kitti")
+    
+    args = parser.parse_args()
+
+    DATA_DIR="/scratch1/ganesang/kitti/raw"
+    SEQ = args.seq
+    DIR = SEQ.split("_")[0]
+    LIDAR_DIR = os.path.join(DATA_DIR, DIR, SEQ, 'velodyne_points/data')
+    IMG_DIR = os.path.join(DATA_DIR, DIR, SEQ, 'image_02/data')
+    CAM_CALIB_PATH = os.path.join(DATA_DIR, DIR, 'calib_cam_to_cam.txt')
+    LIDAR_CALIB_PATH = os.path.join(DATA_DIR, DIR, 'calib_velo_to_cam.txt')
+    OUTPUT_DIR = "--output_dir"
+
     frame_list = [f.split('.')[0] for f in os.listdir(LIDAR_DIR)]
 
     for fr_num in tqdm(sorted(frame_list)):
