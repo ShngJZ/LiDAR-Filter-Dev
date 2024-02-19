@@ -221,7 +221,7 @@ class LiDARCleaner(nn.Module):
             matplotlib.use('Agg')
 
             plt.figure(figsize=(16, 9))
-            if self.showimage: plt.imshow(rgb, alpha=0.5)
+            if self.showimage: plt.imshow(rgb, alpha=0.85)
             plt.scatter(
                 camprj_vls[0, visible_points[sort_ind]].numpy(), camprj_vls[1, visible_points[sort_ind]].numpy(),
                 c=1 / camdepth_vls[sort_ind][visible_points[sort_ind]], cmap=plt.cm.get_cmap('magma'), s=self.plotmarker_size,
@@ -234,7 +234,7 @@ class LiDARCleaner(nn.Module):
             plt.close()
 
             plt.figure(figsize=(16, 9))
-            if self.showimage: plt.imshow(rgb, alpha=0.5)
+            if self.showimage: plt.imshow(rgb, alpha=0.85)
             plt.scatter(
                 camprj_vls[0, visible_points_filtered[sort_ind]].numpy(), camprj_vls[1, visible_points_filtered[sort_ind]].numpy(),
                 c=1 / camdepth_vls[sort_ind][visible_points_filtered[sort_ind]], cmap=plt.cm.get_cmap('magma'), s=self.plotmarker_size,
