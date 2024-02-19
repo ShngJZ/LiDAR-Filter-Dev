@@ -38,7 +38,7 @@ Run the following to produce raw and clean projected depth maps overlaid on the 
 ```bash
 python vis/vis_kitti_gen.py --data_dir "data/KITTI/raw" \
                             --seq <seq_name> \
-                            --output_dir "outputs/kitti
+                            --output_dir "outputs/kitti"
 ```
 
 Replace `<seq_name>` with the sequence whose frames you would like the visualizations for(e.g. `2011_09_26_drive_0002_sync`).
