@@ -41,7 +41,7 @@ python vis/vis_kitti_gen.py --data_dir "data/KITTI/raw" \
                             --output_dir "outputs/kitti"
 ```
 
-Replace `<seq_name>` with the sequence whose frames you would like the visualizations for(e.g. `2011_09_26_drive_0002_sync`).
+Replace `<seq_name>` with the sequence whose frames you would like the visualizations (e.g. `2011_09_26_drive_0002_sync`).
 
 ## Citation
 If our work aided in your research, please consider starring this repo and citing:
