@@ -6,8 +6,7 @@ import matplotlib.pyplot as plt
 from PIL import Image
 from tqdm import tqdm
 import sys
-# sys.path.append("../LiDAR-Filter-Dev/core")
-print(sys.path)
+
 sys.path.append("../LiDAR-Filter-Dev")
 from core.lidar_cleaner import LiDARCleaner
 import argparse
@@ -48,7 +47,7 @@ def func(fr_num):
     data_bin = np.fromfile(os.path.join(LIDAR_DIR, f'{fr_num}.bin'),dtype=np.float32).reshape((-1, 4))
     lidar_pts = data_bin
     lidar_pts[:,-1] = 1.0
-    os.makedirs(osp.join('videos','kitti',SEQ), exist_ok=True)
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     x, y, z = 0.28, -0.00, -0.17
     T_LiDAR_Padding = geometric_transformation(np.eye(3), np.array([x, y, z]))
@@ -87,7 +86,7 @@ if __name__ == "__main__":
 
     DATA_DIR=args.data_dir
     SEQ = args.seq
-    DIR = SEQ.split("_")[0]
+    DIR = SEQ.split("_drive")[0]
     LIDAR_DIR = os.path.join(DATA_DIR, DIR, SEQ, 'velodyne_points/data')
     IMG_DIR = os.path.join(DATA_DIR, DIR, SEQ, 'image_02/data')
     CAM_CALIB_PATH = os.path.join(DATA_DIR, DIR, 'calib_cam_to_cam.txt')
