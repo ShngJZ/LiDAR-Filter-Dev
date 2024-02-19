@@ -69,7 +69,7 @@ def func(fr_num):
         plotmarker_size=2, showimage=True
     )
     visible_points_filtered, lidar_to_be_occluded, imcombined = cleaner(rgb=im, debug=True)
-    imcombined.save(osp.join(OUTPUT_DIR, f"{SEQ}+{fr_num}.png"))
+    imcombined.save(osp.join(OUTPUT_DIR, f"{fr_num}.png"))
 
 if __name__ == "__main__":
 
@@ -81,18 +81,18 @@ if __name__ == "__main__":
     parser.add_argument("--seq",
                         default="")
     parser.add_argument("--output_dir",
-                        default="vis/kitti")
+                        default="outputs")
     
     args = parser.parse_args()
 
-    DATA_DIR="/scratch1/ganesang/kitti/raw"
+    DATA_DIR=args.data_dir
     SEQ = args.seq
     DIR = SEQ.split("_")[0]
     LIDAR_DIR = os.path.join(DATA_DIR, DIR, SEQ, 'velodyne_points/data')
     IMG_DIR = os.path.join(DATA_DIR, DIR, SEQ, 'image_02/data')
     CAM_CALIB_PATH = os.path.join(DATA_DIR, DIR, 'calib_cam_to_cam.txt')
     LIDAR_CALIB_PATH = os.path.join(DATA_DIR, DIR, 'calib_velo_to_cam.txt')
-    OUTPUT_DIR = "--output_dir"
+    OUTPUT_DIR = osp.join(args.output_dir, SEQ)
 
     frame_list = [f.split('.')[0] for f in os.listdir(LIDAR_DIR)]
 
