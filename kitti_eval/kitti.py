@@ -49,9 +49,12 @@ class KITTIDataset(Dataset):
         self.test_depth = test_depth
         self.split_file = gt_depth_file
 
+        self.inv = kwargs.get("inv", False)
+
         # load annotations
         self.dataset = []
         self.load_dataset()
+
         
         print("Split file used: ", self.split_file)
 
@@ -71,17 +74,27 @@ class KITTIDataset(Dataset):
                     self.base_path, depth_map
                 )
                 if "stereo" in self.split_file:
-                    if 'fore' in self.split_file:
-                        img_info["in_depth"] = img_info["annotation_filename_depth"].replace('groundtruth_disp_fore', f"groundtruth_{self.test_depth}")
-                    elif 'back' in self.split_file:
-                        img_info["in_depth"] = img_info["annotation_filename_depth"].replace('groundtruth_disp_back', f"groundtruth_{self.test_depth}")
+                    if self.test_depth == "semi":
+                        if 'fore' in self.split_file:
+                            img_info["in_depth"] = img_info["annotation_filename_depth"].replace('groundtruth_disp_fore', f"groundtruth")
+                        elif 'back' in self.split_file:
+                            img_info["in_depth"] = img_info["annotation_filename_depth"].replace('groundtruth_disp_back', f"groundtruth")
+                        else:
+                            img_info["in_depth"] = img_info["annotation_filename_depth"].replace('groundtruth_disp', f"groundtruth")
                     else:
-                        img_info["in_depth"] = img_info["annotation_filename_depth"].replace('groundtruth_disp', f"groundtruth_{self.test_depth}")
+                        if 'fore' in self.split_file:
+                            img_info["in_depth"] = img_info["annotation_filename_depth"].replace('groundtruth_disp_fore', f"groundtruth_{self.test_depth}")
+                        elif 'back' in self.split_file:
+                            img_info["in_depth"] = img_info["annotation_filename_depth"].replace('groundtruth_disp_back', f"groundtruth_{self.test_depth}")
+                        else:
+                            img_info["in_depth"] = img_info["annotation_filename_depth"].replace('groundtruth_disp', f"groundtruth_{self.test_depth}")
                 else:
-                    if self.test_depth == "random":
+                    if self.test_depth == "random" or (self.inv and self.test_depth in ["filter", "half_occ"]):
                         img_info["in_depth_raw"] = img_info["annotation_filename_depth"].replace('groundtruth', f"groundtruth_raw")
-                        img_info["in_depth_clean"] = img_info["annotation_filename_depth"].replace('groundtruth', f"groundtruth_filter")
-
+                        if self.test_depth == "random":
+                            img_info["in_depth_clean"] = img_info["annotation_filename_depth"].replace('groundtruth', f"groundtruth_filter")
+                        else:
+                            img_info["in_depth_clean"] = img_info["annotation_filename_depth"].replace('groundtruth', f"groundtruth_{self.test_depth}")
                     else:
                         img_info["in_depth"] = img_info["annotation_filename_depth"].replace('groundtruth', f"groundtruth_{self.test_depth}")
                 self.dataset.append(img_info)
@@ -113,20 +126,19 @@ class KITTIDataset(Dataset):
             ).astype(np.float32)
             / self.depth_scale
         )
-        if self.test_depth != "random":
-            depth = (
-                np.asarray(
-                    Image.open(
-                        os.path.join(
-                            self.base_path,
-                            self.dataset[idx]["in_depth"],
-                        )
-                    )
-                ).astype(np.float32)
-                / self.depth_scale
-            )
-
-        else:
+        # if self.test_depth != "random":
+        #     depth = (
+        #         np.asarray(
+        #             Image.open(
+        #                 os.path.join(
+        #                     self.base_path,
+        #                     self.dataset[idx]["in_depth"],
+        #                 )
+        #             )
+        #         ).astype(np.float32)
+        #         / self.depth_scale
+        #     )
+        if (self.test_depth == "random") or (self.inv and self.test_depth in ["filter", "half_occ"]):
             raw_depth = (
                 np.asarray(
                     Image.open(
@@ -149,13 +161,32 @@ class KITTIDataset(Dataset):
                 ).astype(np.float32)
                 / self.depth_scale
             )
-            raw_pts = (raw_depth > 0).astype(np.uint8)
-            clean_pts = (clean_depth > 0).astype(np.uint8)
-            num_pts_raw = np.sum(raw_pts)
-            num_pts_clean = np.sum(clean_pts)
-            prob_rm = (num_pts_clean/num_pts_raw)
-            mask = (raw_pts*np.random.rand(*raw_pts.shape)) < prob_rm
-            depth = raw_depth * mask
+
+            if self.test_depth == "random":
+                raw_pts = (raw_depth > 0).astype(np.uint8)
+                clean_pts = (clean_depth > 0).astype(np.uint8)
+                num_pts_raw = np.sum(raw_pts)
+                num_pts_clean = np.sum(clean_pts)
+                prob_rm = (num_pts_clean/num_pts_raw)
+                mask = (raw_pts*np.random.rand(*raw_pts.shape)) < prob_rm
+                depth = raw_depth * mask
+            else:
+                raw_mask = (raw_depth > 0)
+                clean_mask = (clean_depth > 0)
+                pts_rm_mask = (raw_mask & ~clean_mask)
+                depth = raw_depth * pts_rm_mask
+        else:
+            depth = (
+                np.asarray(
+                    Image.open(
+                        os.path.join(
+                            self.base_path,
+                            self.dataset[idx]["in_depth"],
+                        )
+                    )
+                ).astype(np.float32)
+                / self.depth_scale
+            )
             # print(np.sum(depth>0), num_pts_raw, num_pts_clean)
         return semidense_depth, depth
 

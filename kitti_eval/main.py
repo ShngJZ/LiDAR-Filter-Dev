@@ -19,7 +19,8 @@ def main(args):
 
     eval_dataset = KITTIDataset(gt_depth_file=args.semidense_file, 
                            base_path=args.data_path,
-                           test_depth=args.test_depth)
+                           test_depth=args.test_depth,
+                           inv=args.inv)
 
     eval_sampler = SequentialSampler(eval_dataset)
     eval_loader = DataLoader(
@@ -36,6 +37,8 @@ def main(args):
     for batch in tqdm(eval_loader):
         gt, depth = batch
         mask = (gt > min_depth) & (depth > min_depth)
+        if torch.sum(mask) == 0:
+            continue
         # mask = mask & (depth < max_depth) & (gt < max_depth)
         metrics_tracker.accumulate_metrics(gt=gt.to(device), pred=depth.to(device), mask=mask.to(device))
         # print(metrics_tracker.get_metrics()["rmse"])
@@ -47,11 +50,13 @@ if __name__ == "__main__":
 
     parser.add_argument("--data-path", default="")
     parser.add_argument("--semidense-file", type=str)
-    parser.add_argument("--test-depth", type=str, choices=['raw','filter','random','half_occ'])
+    parser.add_argument("--test-depth", type=str, choices=['raw','filter','random','half_occ','semi'])
+    parser.add_argument("--inv", action='store_true')
     # parser.add_argument("--kitti", type=str, choices=['raw','clean','semidense'], required=False)
     # parser.add_argument("--kitti_stereo", type=str, choices=['foreground','background','all'], required=False)
     # parser.add_argument("--eval_set", type=str, choices=['kitti_stereo','kitti360', 'kitti'], required=False)
     # parser.add_argument("--kitti360", type=str, choices=['raw','clean'], required=False)
 
     args = parser.parse_args()
+    print(args.inv)
     main(args)
