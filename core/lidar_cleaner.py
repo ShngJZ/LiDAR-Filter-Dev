@@ -14,7 +14,7 @@ class LiDARCleaner(nn.Module):
     """
     def __init__(self,
                  intrinsic_cam, extrinsic_LiDAR2Cam, LiDARPoints3D, height, width, rszh=0.5, rszw=1.0,
-                 plotmarker_size=5.0, showimage=False):
+                 plotmarker_size=5.0, showimage=False, gpu_id=0):
         super().__init__()
         self.intrinsic_cam = self.check_intrinsic(copy.deepcopy(intrinsic_cam))
         self.extrinsic_LiDAR2Cam = self.check_extrinsic(copy.deepcopy(extrinsic_LiDAR2Cam))
@@ -29,6 +29,8 @@ class LiDARCleaner(nn.Module):
 
         self.plotmarker_size = plotmarker_size
         self.showimage = showimage
+        
+        self.gpu_id = gpu_id
 
     def acquire_resizeM(self, rszh, rszw):
         resizeM = torch.eye(3)
@@ -71,8 +73,10 @@ class LiDARCleaner(nn.Module):
         querylocation = torch.cat([qx, qy], dim=2)
         querylocation = querylocation.view([1, nquery, nsample, 2])
 
-        querydepth = torch.nn.functional.grid_sample(depth.cuda().float(), querylocation.cuda().float(), mode='nearest')
-        oodselector = torch.nn.functional.grid_sample(torch.ones_like(depth).cuda().float(), querylocation.cuda().float(), mode='nearest')
+        # querydepth = torch.nn.functional.grid_sample(depth.cuda().float(), querylocation.cuda().float(), mode='nearest')
+        # oodselector = torch.nn.functional.grid_sample(torch.ones_like(depth).cuda().float(), querylocation.cuda().float(), mode='nearest')
+        querydepth = torch.nn.functional.grid_sample(depth.to(f"cuda:{self.gpu_id}").float(), querylocation.to(f"cuda:{self.gpu_id}").float(), mode='nearest')
+        oodselector = torch.nn.functional.grid_sample(torch.ones_like(depth).to(f"cuda:{self.gpu_id}").float(), querylocation.to(f"cuda:{self.gpu_id}").float(), mode='nearest')
         querydepth[oodselector == 0] = 1e5
 
         querydepth = querydepth.view([nquery, nsample, 1])
@@ -136,8 +140,10 @@ class LiDARCleaner(nn.Module):
         return eppdir, pure_translation[0:3, :], (eppx, eppy)
 
     def backprj_prj(self, intrinsic, pure_translation, enumlocation, depthinterp):
-        intrinsic = self.pad_pose44(intrinsic).cuda()
-        pure_translation = self.pad_pose44(pure_translation).cuda()
+        # intrinsic = self.pad_pose44(intrinsic).cuda()
+        # pure_translation = self.pad_pose44(pure_translation).cuda()
+        intrinsic = self.pad_pose44(intrinsic).to(f"cuda:{self.gpu_id}")
+        pure_translation = self.pad_pose44(pure_translation).to(f"cuda:{self.gpu_id}")
         prjM = intrinsic @ pure_translation @ intrinsic.inverse()
         prjM = prjM.view([1, 1, 4, 4])
 
@@ -158,7 +164,8 @@ class LiDARCleaner(nn.Module):
         mindist = 1
         maxdist = 100
         samplenum = int(np.ceil((maxdist - mindist) / srch_resolution).item() + 1)
-        sampled_range = torch.linspace(mindist, maxdist, samplenum).cuda()
+        # sampled_range = torch.linspace(mindist, maxdist, samplenum).cuda()
+        sampled_range = torch.linspace(mindist, maxdist, samplenum).to(f"cuda:{self.gpu_id}")
 
         nanchor = len(eppdir_)
         enumlocation = prjpc_lidar_.view([nanchor, 1, 2]) + sampled_range.view([1, samplenum, 1]) * eppdir_.view([nanchor, 1, 2])
@@ -197,9 +204,12 @@ class LiDARCleaner(nn.Module):
             self.LiDARPoints3D,
             height=self.height_rz, width=self.width_rz
         )
-        inpait_d = torch.from_numpy(inpait_d).cuda().float()
-        prjpc_vlidar, prjpc_cam = prjpc_vlidar.T.cuda().float(), prjpc_cam.T.cuda().float()
-        eppdir = eppdir.cuda().float()
+        # inpait_d = torch.from_numpy(inpait_d).cuda().float()
+        # prjpc_vlidar, prjpc_cam = prjpc_vlidar.T.cuda().float(), prjpc_cam.T.cuda().float()
+        # eppdir = eppdir.cuda().float()
+        inpait_d = torch.from_numpy(inpait_d).to(f"cuda:{self.gpu_id}").float()
+        prjpc_vlidar, prjpc_cam = prjpc_vlidar.T.to(f"cuda:{self.gpu_id}").float(), prjpc_cam.T.to(f"cuda:{self.gpu_id}").float()
+        eppdir = eppdir.to(f"cuda:{self.gpu_id}").float()
         occluded = self.clean_python(self.resizeM @ self.intrinsic_cam, pure_translation, inpait_d, prjpc_vlidar, prjpc_cam, eppdir, visible_sel_vlidar, srch_resolution=1.0)
 
         # Apply Clean
