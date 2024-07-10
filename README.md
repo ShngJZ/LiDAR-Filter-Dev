@@ -1,7 +1,7 @@
 # Removing Projective LiDAR Depthmap Artifacts via Exploiting Stereo Geometry
 
-[Shengjie Zhu](https://shngjz.github.io), 
-[Girish Chandar G](girish1511.github.io), 
+[Shengjie Zhu*](https://shngjz.github.io), 
+[Girish Chandar G*](girish1511.github.io), 
 [Abhinav Kumar](https://sites.google.com/view/abhinavkumar), 
 [Xiaoming Liu](http://www.cse.msu.edu/~liuxm/index2.html)
 
