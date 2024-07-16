@@ -1,4 +1,4 @@
-# Removing Projective LiDAR Depthmap Artifacts via Exploiting Stereo Geometry
+# **RePLAy**: Removing Projective LiDAR Depthmap Artifacts via Exploiting Stereo Geometry
 
 [Shengjie Zhu](https://shngjz.github.io)\*, 
 [Girish Chandar G](girish1511.github.io)\*, 
