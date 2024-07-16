@@ -50,7 +50,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--data-path", default="")
     parser.add_argument("--semidense-file", type=str)
-    parser.add_argument("--test-depth", type=str, choices=['raw','filter','random','half_occ','semi'])
+    parser.add_argument("--test-depth", type=str, choices=['raw','filter','random','half_occ','semi', 'filter_nocalib'])
     parser.add_argument("--inv", action='store_true')
     # parser.add_argument("--kitti", type=str, choices=['raw','clean','semidense'], required=False)
     # parser.add_argument("--kitti_stereo", type=str, choices=['foreground','background','all'], required=False)
