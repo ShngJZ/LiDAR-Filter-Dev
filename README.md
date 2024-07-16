@@ -46,7 +46,7 @@ Replace `<seq_name>` with the sequence whose frames you would like the visualiza
 
 ## Processed Datasets
 We provide binary masks over the LiDAR scans of five datasets, namely, KITTI, KITTI360, NuScenes, Waymo and DDAD.
-The masks are provided in a hdf5 format and be accessed [here](https://huggingface.co/datasets/girish1511/RePLAY). The masks can be retrieved using the following script:
+The masks are provided in a hdf5 format [here](https://huggingface.co/datasets/girish1511/RePLAY). The masks can be retrieved using the following script:
 
 ```python
 import h5py
@@ -64,7 +64,20 @@ lidar_pts = lidar_pts[(mask==0),:]
 The `<key>`,`<Dataset>` combinations are as follows:
 - KITTI and KITTI360: `<key> = "<seq_name>@<frame_number>"`. E.g., to access the mask of `2011_09_26_drive_0002_sync/0000000191.png` use `<key> = "2011_09_26_drive_0002_sync@0000000191"`
 - Waymo: `<key> = "<frame_number>"`. You would need to convert Waymo to KITTI format and then use the frame numbers to access the binary masks.
-- NuScenes: `<key> = `
+- NuScenes: `<key> = <lidar_file>@<camera_file>`. For a given `<sample_token>`, then file data can be accessed as follows:
+```python
+from nuscenes.nuscenes import NuScenes
+
+nusc = NuScenes(version='v1.0-trainval', dataroot='/<path_to_dataset>', verbose=True)
+
+sample = nusc.get('sample', <sample_token>)
+
+im_path = nusc.get_sample_data_path(sample['data']['CAM_FRONT'])
+lidar_path = nusc.get_sample_data_path(sample['data']['LIDAR_TOP'])
+
+camera_file = im_path.split('/')[-1].split('.')[0]
+lidar_file = lidar_path.split('/')[-1].split('.')[0]
+```
 - DDAD: `<key> = "<camera_timestamp>@<lidar_timestamp>"`. Use the [official DDAD repository](https://github.com/TRI-ML/DDAD) to read DDAD data, then the timestamps of camera and LiDAR can be retrieved as follows:
 
 ```python
@@ -82,6 +95,15 @@ for sample in dataset:
     lidar_timestamp, camera_timestamp = lidar["timestamp"], camera_01["timestamp"] 
 
 ``` 
+
+## Pretrained Models
+We provide the pretrained ZoeDepth models trained on raw and RePLAy cleaned depthmaps for KITTI, Waymo and NuScenes below.
+
+| Depthmap | KITTI | NuScenes | Waymo |
+| -------- | ----- | -------- | ----- |
+| Raw      | [link](https://huggingface.co/girish1511/RePLAy/blob/main/zoe_kitti_raw.pt) | [link](https://huggingface.co/girish1511/RePLAy/blob/main/zoe_nuscenes_raw.pt) | [link](https://huggingface.co/girish1511/RePLAy/blob/main/zoe_waymo_raw.pt) |
+| RePLAy   | [link](https://huggingface.co/girish1511/RePLAy/blob/main/zoe_kitti_clean.pt) | [link](https://huggingface.co/girish1511/RePLAy/blob/main/zoe_nuscenes_clean.pt) | [link](https://huggingface.co/girish1511/RePLAy/blob/main/zoe_waymo_clean.pt) |
+
 
 ## Citation
 If our work aided in your research, please consider starring this repo and citing:
