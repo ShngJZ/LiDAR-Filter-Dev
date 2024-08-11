@@ -8,7 +8,7 @@
 
 ## Setup
 
-- Install PyTorch version compatible with your device from [here](https://pytorch.org/get-started/previous-versions/). 
+- Install Latest [PyTorch](https://pytorch.org/get-started/locally/). 
 - Run the following commands to install the rest of the requirements
 
 ```bash

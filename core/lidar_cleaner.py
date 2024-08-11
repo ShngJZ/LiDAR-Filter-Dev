@@ -13,8 +13,14 @@ class LiDARCleaner(nn.Module):
     Function to Clean LiDAR Scan Data.
     """
     def __init__(self,
-                 intrinsic_cam, extrinsic_LiDAR2Cam, LiDARPoints3D, height, width, rszh=0.5, rszw=1.0,
-                 plotmarker_size=5.0, showimage=False):
+                 intrinsic_cam,
+                 extrinsic_LiDAR2Cam,
+                 LiDARPoints3D,
+                 height, width,
+                 rszh=0.5, rszw=1.0,
+                 plotmarker_size=5.0,
+                 showimage=False
+                 ):
         super().__init__()
         self.intrinsic_cam = self.check_intrinsic(copy.deepcopy(intrinsic_cam))
         self.extrinsic_LiDAR2Cam = self.check_extrinsic(copy.deepcopy(extrinsic_LiDAR2Cam))

@@ -8,11 +8,14 @@ def read_LiDAR(LIDAR_PATH):
     lidar_pts = np.fromfile(LIDAR_PATH, dtype=np.float32).reshape((-1, 4))
     lidar_pts[:, 3] = 1.0
     return lidar_pts
+
 def geometric_transformation(rotation, translation):
     mat = np.eye(4)
     mat[:3, :3] = rotation
     mat[:3, 3] = translation
     return mat
+
+
 def read_LiDAR_calib(LIDAR_CALIB_PATH):
     lidar_calib = {}
     with open(LIDAR_CALIB_PATH, 'r') as f:
