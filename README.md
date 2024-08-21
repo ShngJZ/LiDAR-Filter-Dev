@@ -1,20 +1,21 @@
-# RePLAy: Removing Projective LiDAR Depthmap Artifacts via Exploiting Stereo Geometry
-
+# RePLA
+This repository contains the code for the paper: **Removing Projective LiDAR Depthmap Artifacts via Exploiting Stereo Geometry**
+<br>
+Authors:
 [Shengjie Zhu](https://shngjz.github.io)\*, 
 [Girish Chandar G](girish1511.github.io)\*, 
 [Abhinav Kumar](https://sites.google.com/view/abhinavkumar), 
 [Xiaoming Liu](http://www.cse.msu.edu/~liuxm/index2.html)
+<br>
+[[arXiv preprint]](https://arxiv.org/abs/2407.19154)  [[Prject Page]](https://shngjz.github.io/RePLAy/)
 
 
 ## Setup
 
 - Install Latest [PyTorch](https://pytorch.org/get-started/locally/). 
-- Run the following commands to install the rest of the requirements
+- Install other dependencies:
 
 ```bash
-git clone https://github.com/ShngJZ/LiDAR-Filter-Dev.git
-git checkout release
-
 pip install -r requirements.txt
 ```
 
@@ -95,15 +96,6 @@ for sample in dataset:
     lidar_timestamp, camera_timestamp = lidar["timestamp"], camera_01["timestamp"] 
 
 ``` 
-
-## Pretrained Models
-We provide the pretrained ZoeDepth models trained on raw and RePLAy cleaned depthmaps for KITTI, Waymo and NuScenes below.
-
-| Depthmap | KITTI | NuScenes | Waymo |
-| -------- | ----- | -------- | ----- |
-| Raw      | [link](https://huggingface.co/girish1511/RePLAy/blob/main/zoe_kitti_raw.pt) | [link](https://huggingface.co/girish1511/RePLAy/blob/main/zoe_nuscenes_raw.pt) | [link](https://huggingface.co/girish1511/RePLAy/blob/main/zoe_waymo_raw.pt) |
-| RePLAy   | [link](https://huggingface.co/girish1511/RePLAy/blob/main/zoe_kitti_clean.pt) | [link](https://huggingface.co/girish1511/RePLAy/blob/main/zoe_nuscenes_clean.pt) | [link](https://huggingface.co/girish1511/RePLAy/blob/main/zoe_waymo_clean.pt) |
-
 
 ## Citation
 If our work aided in your research, please consider starring this repo and citing:

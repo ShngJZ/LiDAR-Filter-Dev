@@ -74,9 +74,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Testing", conflict_handler="resolve")
     
-    parser.add_argument("--data_dir", 
-                        required="True", 
-                        help="Path to KITTI dataset")
+    parser.add_argument("--data_dir",  required="True", help="Path to KITTI dataset")
     parser.add_argument("--seq",
                         default="")
     parser.add_argument("--output_dir",
