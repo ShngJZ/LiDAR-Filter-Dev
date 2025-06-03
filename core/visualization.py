@@ -1,4 +1,3 @@
-# Put most Common Functions Here
 import numpy as np
 import PIL.Image as Image
 import matplotlib.pyplot as plt
